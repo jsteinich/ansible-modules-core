@@ -100,6 +100,13 @@ options:
     version_added: "2.0"
     description:
       - If C(no), do not call svn switch before update.
+  ignore_externals:
+    required: false
+    default: "no"
+    choices: [ "yes", "no" ]
+    version_added: "2.3"
+    description:
+      - If C(yes), ignore svn externals.
 '''
 
 EXAMPLES = '''
@@ -150,8 +157,6 @@ class Subversion(object):
             bits.extend(["--username", self.username])
         if self.password:
             bits.extend(["--password", self.password])
-        if self.ignore_externals:
-            bits.extend('--ignore-externals')
         bits.extend(args)
         rc, out, err = self.module.run_command(bits, check_rc)
         if check_rc:
@@ -166,13 +171,20 @@ class Subversion(object):
 
     def checkout(self):
         '''Creates new svn working directory if it does not already exist.'''
-        self._exec(["checkout", "-r", self.revision, self.repo, self.dest])
+        cmd = ["checkout"]
+        if self.ignore_externals:
+            cmd.append("--ignore-externals")
+        cmd.extend(["-r", self.revision, self.repo, self.dest])
+
+        self._exec(cmd)
 
     def export(self, force=False):
         '''Export svn repo to directory'''
         cmd = ["export"]
         if force:
             cmd.append("--force")
+        if self.ignore_externals:
+            cmd.append("--ignore-externals")
         cmd.extend(["-r", self.revision, self.repo, self.dest])
 
         self._exec(cmd)
@@ -180,11 +192,21 @@ class Subversion(object):
     def switch(self):
         '''Change working directory's repo.'''
         # switch to ensure we are pointing at correct repo.
-        self._exec(["switch", self.repo, self.dest])
+        cmd = ["switch"]
+        if self.ignore_externals:
+            cmd.append("--ignore-externals")
+        cmd.extend([self.repo, self.dest])
+
+        self._exec(cmd)
 
     def update(self):
         '''Update existing svn working directory.'''
-        self._exec(["update", "-r", self.revision, self.dest])
+        cmd = ["update"]
+        if self.ignore_externals:
+            cmd.append("--ignore-externals")
+        cmd.extend(["-r", self.revision, self.dest])
+
+        self._exec(cmd)
 
     def revert(self):
         '''Revert svn working directory.'''
