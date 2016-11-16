@@ -128,7 +128,7 @@ import tempfile
 
 class Subversion(object):
     def __init__(
-            self, module, dest, repo, revision, username, password, svn_path):
+            self, module, dest, repo, revision, username, password, svn_path, ignore_externals):
         self.module = module
         self.dest = dest
         self.repo = repo
@@ -136,6 +136,7 @@ class Subversion(object):
         self.username = username
         self.password = password
         self.svn_path = svn_path
+        self.ignore_externals = ignore_externals
 
     def _exec(self, args, check_rc=True):
         '''Execute a subversion command, and return output. If check_rc is False, returns the return code instead of the output.'''
@@ -149,6 +150,8 @@ class Subversion(object):
             bits.extend(["--username", self.username])
         if self.password:
             bits.extend(["--password", self.password])
+        if self.ignore_externals:
+            bits.extend('--ignore-externals')
         bits.extend(args)
         rc, out, err = self.module.run_command(bits, check_rc)
         if check_rc:
@@ -237,6 +240,7 @@ def main():
             checkout=dict(default=True, required=False, type='bool'),
             update=dict(default=True, required=False, type='bool'),
             switch=dict(default=True, required=False, type='bool'),
+            ignore_externals=dict(default=False, required=False, type='bool'),
         ),
         supports_check_mode=True
     )
@@ -252,6 +256,7 @@ def main():
     switch = module.params['switch']
     checkout = module.params['checkout']
     update = module.params['update']
+    ignore_externals = module.params['ignore_externals']
 
     # We screenscrape a huge amount of svn commands so use C locale anytime we
     # call run_command()
@@ -260,7 +265,7 @@ def main():
     if not dest and (checkout or update or export):
         module.fail_json(msg="the destination directory must be specified unless checkout=no, update=no, and export=no")
 
-    svn = Subversion(module, dest, repo, revision, username, password, svn_path)
+    svn = Subversion(module, dest, repo, revision, username, password, svn_path, ignore_externals)
 
     if not export and not update and not checkout:
         module.exit_json(changed=False, after=svn.get_remote_revision())
